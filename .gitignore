@@ -3,3 +3,4 @@
 .venv
 *__pycache__
 eeg-motor-movementimagery-dataset-1.0.0
+data
