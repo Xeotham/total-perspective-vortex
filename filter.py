@@ -9,7 +9,7 @@ def low_pass_filter(adata: np.ndarray, bandlimit_index=1000, order=4) -> np.ndar
     # Butterworth for low pass filter:
     response = 1.0 / np.sqrt(1.0 + (freq_indices / bandlimit_index) ** (2 * order))
 
-    fsig_filtered = fsig * response  # broadcasting sur l'axe fréquence
+    fsig_filtered = fsig * response
 
     adata_filtered = np.fft.ifft(fsig_filtered, axis=1)
     return np.real(adata_filtered)

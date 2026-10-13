@@ -11,7 +11,6 @@ import re
 import multiprocessing as mp
 
 from mne.io.edf.edf import RawEDF
-from dataclasses import dataclass
 
 Idx = int
 SubjectList = list[pl.Path]
@@ -37,8 +36,11 @@ TRAIN_SET_SIZE = 0.8
 LOW_TIME = 0.5
 HIGH_TIME = 4
 
-MAX_SEQUENCE = 29
+MAX_SEQUENCE = 14
 SIG_POINT_NB = 561
+
+PASSBAND_LOW = 8
+PASSBAND_HIGH = 30
 
 def shuffle_subjects(subjects: pl.Path) -> tuple[SubjectList, SubjectList, SubjectList]:
     """
@@ -75,7 +77,7 @@ def extract_edf_data_with_epochs(raw: RawEDF, events: np.ndarray) -> tuple[np.nd
     :return: X and y data of raw.
     """
 
-    event_id = {'T0': 1, 'T1': 2, 'T2': 3}
+    event_id = {'T1': 2, 'T2': 3}
 
     epochs = mne.Epochs(
         raw,
@@ -147,6 +149,8 @@ def __parse_pool_subject(args) -> None:
             continue
         try:
             data = mne.io.read_raw_edf(run, verbose=False)
+            data = data.load_data(verbose=False)
+            data.filter(PASSBAND_LOW, PASSBAND_HIGH, verbose=False)
             X_extract, y_extract = extraxt_edf_data(data)
 
             if re.search(r"R(03|04|07|08|11|12)\.edf$", run.name):
@@ -198,7 +202,7 @@ def parse_and_save_sub(sub_path_list: SubjectList, save_path: pathlib.Path) -> N
         pool.join()
 
 
-def fuse_files(save_path: pathlib.Path) -> None:
+def fuse_files(save_path: pathlib.Path, tmp_path: pathlib.Path) -> None:
     """
     Function that create a `.npz` file which concatenate all the parsed subjects.
 
@@ -208,15 +212,19 @@ def fuse_files(save_path: pathlib.Path) -> None:
 
     states = ("unilateral", "bilateral")
 
+    if not save_path.exists():
+        save_path.mkdir(parents=True, exist_ok=True)
+
     for state in states:
+        src_path = tmp_path / state
         curr_path = save_path / state
-        if not curr_path.exists():
+        if not src_path.exists():
             continue
 
         X_all = []
         y_all = []
 
-        for path in curr_path.glob("*.npz"):
+        for path in src_path.glob("*.npz"):
             curr_data = np.load(path)
             X_all.append(curr_data["X"])
             y_all.append(curr_data["y"])
@@ -224,7 +232,7 @@ def fuse_files(save_path: pathlib.Path) -> None:
         X_all = np.concatenate(X_all, axis=0)
         y_all = np.concatenate(y_all, axis=0)
 
-        np.savez_compressed(f"{curr_path}.npz", X_all=X_all, y_all=y_all)
+        np.savez_compressed(f"{curr_path}.npz", X=X_all, y=y_all)
 
 
 def main():
@@ -247,19 +255,24 @@ def main():
 
         train_sub, val_sub, test_sub = shuffle_subjects(main_dir / "files")
 
+        tmp_train_path = pl.Path("/tmp/train")
         train_path = save_dir / "train"
+
+        tmp_val_path = pl.Path("/tmp/val")
         val_path = save_dir / "val"
+
+        tmp_test_path = pl.Path("/tmp/test")
         test_path = save_dir / "test"
 
         print("Parse and save training data...")
-        parse_and_save_sub(train_sub, train_path)
-        fuse_files(train_path)
+        parse_and_save_sub(train_sub, tmp_train_path)
+        fuse_files(train_path, tmp_train_path)
         print("Parse and save validation data...")
-        parse_and_save_sub(val_sub, val_path)
-        fuse_files(val_path)
+        parse_and_save_sub(val_sub, tmp_val_path)
+        fuse_files(val_path, tmp_val_path)
         print("Parse and save testing data...")
-        parse_and_save_sub(test_sub, test_path)
-        fuse_files(test_path)
+        parse_and_save_sub(test_sub, tmp_test_path)
+        fuse_files(test_path, tmp_test_path)
 
     except Exception as err:
         print(f"Error: {err}")
