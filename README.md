@@ -22,5 +22,8 @@ Those ML **algorithm** will be used to **predict**, in real time, which **moveme
 - [IBM article about dimensionality reduction.](https://www.ibm.com/think/topics/dimensionality-reduction)
 - [Article with explanation and use of different dimensionality reduction.](https://pmc.ncbi.nlm.nih.gov/articles/PMC12453773/)
 - [Papper given in the subject about CSP.](https://doc.ml.tu-berlin.de/bbci/publications/BlaTomLemKawMue08.pdf)
+- [Calculation of the CSP](https://milanrybar.cz/common-spatial-patterns-derivations/)
 ### Wavelet Transform
 - [Article which explain what is the Wavelet Transform](https://towardsdatascience.com/the-wavelet-transform-e9cfa85d7b34/)
+### Scikit-Learn implementation
+- [Scikit-Learn explanation](https://scikit-learn.org/stable/developers/develop.html)
